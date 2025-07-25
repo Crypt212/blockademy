@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "blockademy_backend": {
+      "candid": "src/blockademy_backend/blockademy_backend.did",
+      "package": "blockademy_backend",
+      "type": "rust"
+    },
+    "blockademy_frontend": {
+      "dependencies": [
+        "blockademy_backend"
+      ],
+      "source": [
+        "src/blockademy_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "blockademy_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
