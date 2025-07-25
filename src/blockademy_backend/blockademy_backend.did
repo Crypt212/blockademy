@@ -1,3 +1,13 @@
+type Question = record {
+  id : nat64;
+  difficulty : nat8;
+  "text" : text;
+  correct_index : nat8;
+  genres : vec text;
+  options : vec text;
+};
 service : {
-    "greet": (text) -> (text) query;
+  get_genre_questions : (text, nat64) -> (vec Question) query;
+  get_question : (nat64) -> (opt Question) query;
+  store_question : (text, vec text, nat8, vec text, nat8) -> (nat64);
 }
