@@ -10,12 +10,78 @@ struct IDCounters {
     certificate_id: u64,
 }
 
+// Your improved User struct
 #[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
 struct User {
     principal: Principal,
     role: Role,
     exams_taken: Vec<u64>,
     certificates: Vec<u64>,
+    created_at: u64,
+    last_login: u64,
+}
+
+// --- AUTHENTICATION FUNCTIONS ---
+
+/// Registers a new user or returns existing user info
+/// This is usually called automatically after frontend login
+#[ic_cdk::update]
+fn register_or_login() -> Result<User, String> {
+    let caller_principal = caller();
+    let now = ic_cdk::api::time() as u64;
+    
+    USER_STORE.with(|store| {
+        let mut store_mut = store.borrow_mut();
+        
+        if let Some(user) = store_mut.get_mut(&caller_principal) {
+            // Existing user - update last login
+            user.last_login = now;
+            return Ok(user.clone());
+        }
+        
+        // New user - create and register
+        let new_user = User {
+            principal: caller_principal,
+            role: Role::Student,
+            exams_taken: Vec::new(),
+            certificates: Vec::new(),
+            created_at: now,
+            last_login: now,
+        };
+        
+        store_mut.insert(caller_principal, new_user.clone());
+        Ok(new_user)
+    })
+}
+
+/// Gets current user info (requires registration first)
+#[ic_cdk::query]
+fn get_my_profile() -> Result<User, String> {
+    let caller_principal = caller();
+    
+    USER_STORE.with(|store| {
+        store
+            .borrow()
+            .get(&caller_principal)
+            .cloned()
+            .ok_or_else(|| "User not registered. Call register_or_login first.".to_string())
+    })
+}
+
+/// Optional: Check if a principal is registered
+#[ic_cdk::query]
+fn is_user_registered(principal: Principal) -> bool {
+    USER_STORE.with(|store| store.borrow().contains_key(&principal))
+}
+
+/// Optional: Get all users (Admin only)
+#[ic_cdk::query]
+fn get_all_users() -> Result<Vec<User>, String> {
+    is_caller_admin()?;
+    
+    USER_STORE.with(|store| {
+        Ok(store.borrow().values().cloned().collect())
+    })
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
@@ -23,6 +89,7 @@ struct Exam {
     id: u64,
     title: String,
     questions: Vec<Question>,
+    level: Level,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
@@ -37,9 +104,8 @@ struct Certificate {
 #[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
 struct Question {
     text: String,
-    answers: Vec<String>,
-    correct_choice: u8,
-    level: Level,
+    choices: Vec<String>,
+    answer_index: u8,
     score: u8,
 }
 
@@ -147,7 +213,7 @@ fn submit_answers(exam_id: u64, answers: Vec<String>) -> Result<u8, String> {
     for (i, user_answer) in answers.iter().enumerate() {
         if i < exam.questions.len() {
             let question = &exam.questions[i];
-            let correct_answer = question.answers.get(question.correct_choice as usize);
+            let correct_answer = question.choices.get(question.answer_index as usize);
             if let Some(correct) = correct_answer {
                 if user_answer == correct {
                     score += question.score;
@@ -237,7 +303,7 @@ fn get_certificates(user_principal: Principal) -> Vec<Certificate> {
 
 // Create a new exam (Admin only)
 #[ic_cdk::update]
-fn create_exam(title: String, questions: Vec<Question>) -> Result<u64, String> {
+fn create_exam(title: String, questions: Vec<Question>, level: Level) -> Result<u64, String> {
     is_caller_admin()?;
 
     let new_id = ID_COUNTERS.with(|counters| {
@@ -251,6 +317,7 @@ fn create_exam(title: String, questions: Vec<Question>) -> Result<u64, String> {
         id: new_id,
         title,
         questions,
+        level
     };
 
     EXAM_STORE.with(|store| {
@@ -298,21 +365,19 @@ fn create_test_data() {
     let questions = vec![
         Question {
             text: "What is the capital of France?".to_string(),
-            answers: vec!["Paris".to_string(), "London".to_string(), "Berlin".to_string()],
-            correct_choice: 0,
-            level: Level::Beginner,
+            choices: vec!["Paris".to_string(), "London".to_string(), "Berlin".to_string()],
+            answer_index: 0,
             score: 10,
         },
         Question {
             text: "2 + 2 = ?".to_string(),
-            answers: vec!["3".to_string(), "4".to_string(), "5".to_string()],
-            correct_choice: 1,
-            level: Level::Beginner,
+            choices: vec!["3".to_string(), "4".to_string(), "5".to_string()],
+            answer_index: 1,
             score: 10,
         }
     ];
 
-    let _ = create_exam("General Knowledge Test".to_string(), questions);
+    let _ = create_exam("General Knowledge Test".to_string(), questions, Level::Beginner); 
     
     // Make caller an admin for testing
     USER_STORE.with(|store| {

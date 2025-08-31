@@ -1,5 +1,5 @@
 [workspace]
 members = [
-    "src/blockademy_backend"
+    "src/backend"
 ]
 resolver = "2"

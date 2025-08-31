@@ -1,19 +1,18 @@
 {
   "canisters": {
-    "blockademy_backend": {
-      "candid": "src/blockademy_backend/blockademy_backend.did",
-      "package": "blockademy_backend",
+    "backend": {
+      "candid": "src/backend/backend.did",
+      "package": "backend",
       "type": "rust"
     },
-    "blockademy_frontend": {
+    "frontend": {
       "dependencies": [
-        "blockademy_backend"
+        "backend"
       ],
       "source": [
-        "src/blockademy_frontend/dist"
+        "src/frontend/dist"
       ],
-      "type": "assets",
-      "workspace": "blockademy_frontend"
+      "type": "assets"
     }
   },
   "defaults": {
