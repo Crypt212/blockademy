@@ -1,43 +1,42 @@
-type Certificate = record {
+type Exam = record {
   id : nat64;
-  user_principal : principal;
-  score : nat8;
-  awarded_at : nat64;
-  exam_id : nat64;
+  title : text;
+  organization_name : text;
+  level : Level;
+  questions : vec Question;
 };
-type Exam = record { id : nat64; title : text; questions : vec Question };
 type Level = variant { Beginner; Advanced; Intermediate };
 type Question = record {
-  answers : vec text;
+  correct_answer_index : nat8;
   "text" : text;
-  level : Level;
   score : nat8;
-  correct_choice : nat8;
+  choices : vec text;
 };
 type Result = variant { Ok : nat64; Err : text };
 type Result_1 = variant { Ok; Err : text };
 type Result_2 = variant { Ok : Exam; Err : text };
-type Result_3 = variant { Ok : text; Err : text };
-type Result_4 = variant { Ok : User; Err : text };
+type Result_3 = variant { Ok : User; Err : text };
+type Result_4 = variant { Ok : vec User; Err : text };
 type Result_5 = variant { Ok : nat8; Err : text };
 type Role = variant { Teacher; Student; Admin };
 type User = record {
+  last_login : nat64;
   "principal" : principal;
+  username : text;
   role : Role;
+  created_at : nat64;
   certificates : vec nat64;
-  exams_taken : vec nat64;
 };
 service : {
-  claim_certificate : (nat64) -> (Result);
-  create_exam : (text, vec Question) -> (Result);
+  create_exam : (text, text, vec Question, Level) -> (Result);
   create_test_data : () -> ();
   delete_exam : (nat64) -> (Result_1);
-  get_certificates : (principal) -> (vec Certificate) query;
   get_exam : (nat64) -> (Result_2) query;
-  get_result : (nat64, principal) -> (Result_3) query;
-  get_user : (principal) -> (Result_4) query;
+  get_user_data : () -> (Result_3) query;
+  is_user_registered : () -> (Result_1) query;
   list_exams : () -> (vec Exam) query;
+  list_users : () -> (Result_4) query;
   promote_to_admin : (principal) -> (Result_1);
-  register_user : () -> ();
+  register_user : (text) -> (Result_3);
   submit_answers : (nat64, vec text) -> (Result_5);
 }
